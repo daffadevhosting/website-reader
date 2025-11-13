@@ -3,5 +3,5 @@ main = "src/workers.js"
 compatibility_date = "2025-11-01"
 
 [[kv_namespaces]]
-binding = "R_NAMESPACE"
+binding = "YOUR_NAMESPACE"
 id = "9eaf5a3f3187454896f976b96bd48e7a"
