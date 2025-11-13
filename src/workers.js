@@ -1,40 +1,41 @@
 import { Readability } from '@mozilla/readability';
 import { parseHTML } from 'linkedom';
 
-// Konfigurasi
-const CACHE_TTL = 3600; // 1 jam cache
-const RATE_LIMIT = 100; // 100 requests per jam
-const REQUEST_TIMEOUT = 10000; // 10 detik timeout
-
 export default {
   async fetch(request, env) {
+    // CORS headers
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
+    };
+
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        },
-      });
+      return new Response(null, { headers: corsHeaders });
     }
 
     try {
       const url = new URL(request.url);
       const clientIP = request.headers.get('cf-connecting-ip') || 'unknown';
       
-      // Rate Limiting
-      if (!await checkRateLimit(clientIP, env)) {
+      // Rate Limiting (optional)
+      if (env.CACHE && !await checkRateLimit(clientIP, env)) {
         return jsonResponse({ 
           error: 'Rate limit exceeded', 
           message: 'Maximum 100 requests per hour' 
-        }, 429);
+        }, 429, corsHeaders);
       }
 
-      // Method 1: GET parameter
-      let targetUrl = url.searchParams.get('url');
+      // Multiple URL extraction methods
+      let targetUrl = url.pathname.slice(1); // Jina-style: /https://...
       
-      // Method 2: POST body
+      // Query parameter fallback
+      if (!targetUrl || targetUrl === '') {
+        targetUrl = url.searchParams.get('url');
+      }
+      
+      // POST body fallback
       if (!targetUrl && request.method === 'POST') {
         const contentType = request.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
@@ -47,45 +48,56 @@ export default {
         }
       }
 
+      // URL validation
       if (!targetUrl) {
         return jsonResponse({
           error: 'URL parameter required',
-          example: 'https://your-worker.dev/?url=https://example.com',
           usage: {
-            get: 'GET /?url=https://example.com',
-            post: 'POST / with JSON { "url": "https://example.com" }'
+            'Jina-style': 'GET /https://example.com',
+            'Query-param': 'GET /?url=https://example.com',
+            'POST': 'POST / with JSON { "url": "https://example.com" }'
           }
-        }, 400);
+        }, 400, corsHeaders);
       }
 
-      // Validate URL
+      // URL normalization
+      if (!targetUrl.startsWith('http')) {
+        targetUrl = 'https://' + targetUrl;
+      }
+
       try {
         new URL(targetUrl);
       } catch {
-        return jsonResponse({ error: 'Invalid URL format' }, 400);
+        return jsonResponse({ error: 'Invalid URL format' }, 400, corsHeaders);
       }
 
-      // Cek cache dulu
-      const cacheKey = `article:${btoa(targetUrl)}`;
-      const cached = await env.YOUR_NAMESPACE?.get(cacheKey, 'json');
-      
-      if (cached) {
-        cached.data.cached = true;
-        return jsonResponse(cached);
+      // Cache check
+      const cacheKey = `content:${btoa(targetUrl)}`;
+      if (env.CACHE) {
+        const cached = await env.CACHE.get(cacheKey, 'json');
+        if (cached) {
+          cached.data.cached = true;
+          return jsonResponse(cached, 200, corsHeaders);
+        }
       }
 
       // Fetch dengan timeout
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), REQUEST_TIMEOUT)
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
       );
 
       const response = await Promise.race([
         fetch(targetUrl, {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br',
           },
+          cf: {
+            cacheTtl: 300,
+            cacheEverything: false,
+          }
         }),
         timeoutPromise
       ]);
@@ -95,7 +107,7 @@ export default {
           error: `Failed to fetch URL: ${response.status}`,
           status: response.status,
           statusText: response.statusText
-        }, response.status);
+        }, response.status, corsHeaders);
       }
 
       const html = await response.text();
@@ -107,16 +119,20 @@ export default {
           error: 'Content is not HTML',
           contentType,
           supported: ['text/html', 'application/xhtml+xml']
-        }, 400);
+        }, 400, corsHeaders);
       }
 
-      // Parse HTML dengan linkedom dan base href
-      const htmlWithBase = `<base href="${targetUrl}">${html}`;
+      // Parse HTML dengan LinkedOM
+      const htmlWithBase = `<!DOCTYPE html><html><head><base href="${targetUrl}"></head><body>${html}</body></html>`;
       const { document } = parseHTML(htmlWithBase);
-      
-      // Extract metadata sebelum Readality (karena Readability bisa modif DOM)
+
+      // Extract metadata sebelum Readability
       const metadata = extractMetadata(document);
       const images = extractImages(document, targetUrl);
+
+      // Remove unwanted elements
+      const removables = document.querySelectorAll('script, style, noscript, nav, header, footer, iframe, .ad, .ads, [class*="advertisement"]');
+      removables.forEach(el => el.remove());
 
       // Parse dengan Readability
       const reader = new Readability(document);
@@ -126,7 +142,7 @@ export default {
         return jsonResponse({
           error: 'Could not extract content from page',
           suggestion: 'The page might be too complex or require JavaScript'
-        }, 400);
+        }, 400, corsHeaders);
       }
 
       // Convert HTML to plain text
@@ -138,6 +154,7 @@ export default {
       const maxLength = parseInt(url.searchParams.get('maxLength')) || 0;
       const includeKeywords = url.searchParams.get('keywords') !== 'false';
       const includeSummary = url.searchParams.get('summary') !== 'false';
+      const enhanced = url.searchParams.get('enhanced') !== 'false';
 
       // Potong teks jika diperlukan
       let finalContent = plainText;
@@ -152,44 +169,61 @@ export default {
       const result = {
         success: true,
         data: {
+          // Basic content (Jina-compatible)
           url: targetUrl,
           title: article.title,
-          author: article.author,
           content: finalContent,
-          excerpt: article.excerpt,
+          text: finalContent, // Jina alias
+          ...(article.author && { author: article.author }),
+          ...(article.excerpt && { excerpt: article.excerpt }),
+          
+          // Enhanced features
           length: finalContent.length,
           textLength: analysis.wordCount,
-          analysis: analysis,
-          images: images,
-          metadata: metadata,
-          ...(includeHtml && { htmlContent: article.content }),
-          ...(includeKeywords && { keywords: extractKeywords(finalContent) }),
-          ...(includeSummary && { summary: generateSummary(finalContent) }),
-          cached: false,
-          timestamp: new Date().toISOString()
+          readingTime: analysis.readingTime,
+          timestamp: new Date().toISOString(),
+          cached: false
         },
       };
 
+      // Tambahkan fitur enhanced jika diminta
+      if (enhanced) {
+        result.data.analysis = analysis;
+        result.data.images = images;
+        result.data.metadata = metadata;
+        
+        if (includeKeywords) {
+          result.data.keywords = extractKeywords(finalContent);
+        }
+        
+        if (includeSummary) {
+          result.data.summary = generateSummary(finalContent);
+        }
+        
+        if (includeHtml) {
+          result.data.htmlContent = article.content;
+        }
+      }
+
       // Simpan ke cache (jika available)
-      if (env.YOUR_NAMESPACE) {
-        await env.YOUR_NAMESPACE.put(cacheKey, JSON.stringify(result), {
-          expirationTtl: CACHE_TTL
+      if (env.CACHE) {
+        await env.CACHE.put(cacheKey, JSON.stringify(result), {
+          expirationTtl: 3600 // 1 hour
         });
       }
 
       // Response berdasarkan format
-      if (format === 'text') {
+      const acceptHeader = request.headers.get('accept') || '';
+      if (format === 'text' || acceptHeader.includes('text/plain')) {
         return new Response(finalContent, {
-          headers: { 
-            'Content-Type': 'text/plain; charset=utf-8', 
-            'Access-Control-Allow-Origin': '*',
-            'X-Original-Title': article.title || '',
-            'X-Word-Count': analysis.wordCount.toString()
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            ...corsHeaders
           }
         });
       }
 
-      return jsonResponse(result);
+      return jsonResponse(result, 200, corsHeaders);
 
     } catch (error) {
       console.error('Error:', error);
@@ -198,50 +232,44 @@ export default {
         return jsonResponse({ 
           error: 'Request timeout',
           message: 'The website took too long to respond'
-        }, 408);
+        }, 408, corsHeaders);
       }
       
       return jsonResponse({
         error: 'Server error',
-        message: error.message,
-        stack: env.NODE_ENV === 'development' ? error.stack : undefined
-      }, 500);
+        message: error.message
+      }, 500, corsHeaders);
     }
   },
 };
 
-// ========== FITUR CACHE ==========
+// ========== RATE LIMITING ==========
 async function checkRateLimit(ip, env) {
-  if (!env.YOUR_NAMESPACE) return true; // Skip jika tidak ada KV
-  
   const key = `rate:${ip}`;
-  const current = await env.YOUR_NAMESPACE.get(key);
+  const current = await env.CACHE.get(key);
+  const RATE_LIMIT = 100;
   
   if (current && parseInt(current) >= RATE_LIMIT) {
     return false;
   }
   
-  await env.YOUR_NAMESPACE.put(key, (parseInt(current) || 0) + 1, {
+  await env.CACHE.put(key, (parseInt(current) || 0) + 1, {
     expirationTtl: 3600
   });
   
   return true;
 }
 
-// ========== FITUR ANALISIS KONTEN ==========
+// ========== CONTENT ANALYSIS ==========
 function analyzeContent(text) {
   const words = text.split(/\s+/).filter(word => word.length > 0);
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
   const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim());
   
-  // Reading time (average 200 WPM)
   const readingTime = Math.max(1, Math.ceil(words.length / 200));
-  
-  // Basic readability score
   const avgWordsPerSentence = sentences.length > 0 ? words.length / sentences.length : 0;
   const readabilityScore = Math.max(0, Math.min(100, 100 - (avgWordsPerSentence * 1.5)));
   
-  // Character statistics
   const chars = text.length;
   const charsWithoutSpaces = text.replace(/\s/g, '').length;
   
@@ -258,7 +286,7 @@ function analyzeContent(text) {
   };
 }
 
-// ========== FITUR KEYWORD EXTRACTION ==========
+// ========== KEYWORD EXTRACTION ==========
 function extractKeywords(text, maxKeywords = 15) {
   const words = text.toLowerCase().split(/\s+/);
   const stopWords = new Set([
@@ -270,7 +298,6 @@ function extractKeywords(text, maxKeywords = 15) {
   
   const frequency = {};
   words.forEach(word => {
-    // Clean word: remove punctuation, keep only letters and numbers
     word = word.replace(/[^a-z0-9]/g, '');
     if (word.length > 3 && !stopWords.has(word)) {
       frequency[word] = (frequency[word] || 0) + 1;
@@ -280,27 +307,27 @@ function extractKeywords(text, maxKeywords = 15) {
   return Object.entries(frequency)
     .sort(([,a], [,b]) => b - a)
     .slice(0, maxKeywords)
-    .map(([word, count]) => ({ word, count, frequency: Math.round((count / words.length) * 10000) / 100 }));
+    .map(([word, count]) => ({ 
+      word, 
+      count, 
+      frequency: Math.round((count / words.length) * 10000) / 100 
+    }));
 }
 
-// ========== FITUR SUMMARY GENERATION ==========
+// ========== SUMMARY GENERATION ==========
 function generateSummary(text, maxSentences = 3) {
   const sentences = text.split(/[.!?]+/)
     .map(s => s.trim())
-    .filter(s => s.length > 30 && s.length < 500); // Filter kalimat yang terlalu pendek/panjang
+    .filter(s => s.length > 30 && s.length < 500);
   
   if (sentences.length === 0) return '';
   
-  // Prioritize early sentences (often contain main ideas)
   const importantSentences = sentences.slice(0, Math.min(maxSentences * 2, sentences.length));
-  
-  // Simple scoring based on position and length
   const scoredSentences = importantSentences.map((sentence, index) => ({
     sentence,
     score: (importantSentences.length - index) * 0.5 + Math.min(sentence.length / 100, 1)
   }));
   
-  // Take top sentences
   return scoredSentences
     .sort((a, b) => b.score - a.score)
     .slice(0, maxSentences)
@@ -308,34 +335,37 @@ function generateSummary(text, maxSentences = 3) {
     .join(' ');
 }
 
-// ========== FITUR IMAGE EXTRACTION ==========
+// ========== IMAGE EXTRACTION ==========
 function extractImages(document, baseUrl) {
   try {
     const images = Array.from(document.querySelectorAll('img'))
       .map(img => {
         let src = img.src || '';
-        // Resolve relative URLs
         if (src && !src.startsWith('http')) {
-          src = new URL(src, baseUrl).href;
+          try {
+            src = new URL(src, baseUrl).href;
+          } catch (e) {
+            console.error('Error resolving image URL:', e);
+          }
         }
         
         return {
           src: src,
           alt: img.alt || '',
           title: img.title || '',
-          width: img.width || null,
-          height: img.height || null
+          width: img.getAttribute('width') || null,
+          height: img.getAttribute('height') || null
         };
       })
-      .filter(img => img.src && img.src.startsWith('http')); // Filter hanya URL valid
+      .filter(img => img.src && img.src.startsWith('http'));
     
-    return images.slice(0, 20); // Batasi jumlah gambar
+    return images.slice(0, 20);
   } catch (error) {
     return [];
   }
 }
 
-// ========== FITUR METADATA EXTRACTION ==========
+// ========== METADATA EXTRACTION ==========
 function extractMetadata(document) {
   const metadata = {};
   
@@ -376,7 +406,7 @@ function extractMetadata(document) {
       metadata.canonical = canonical.getAttribute('href');
     }
     
-    // Description from meta or first paragraph
+    // Description fallback
     if (!metadata.description) {
       const firstParagraph = document.querySelector('p');
       if (firstParagraph) {
@@ -391,10 +421,11 @@ function extractMetadata(document) {
   return metadata;
 }
 
-// ========== FUNGSI BANTU YANG SUDAH ADA ==========
+// ========== HTML TO PLAIN TEXT ==========
 function htmlToPlainText(html) {
   if (!html) return '';
 
+  // Parse HTML dengan LinkedOM
   const { document } = parseHTML(html);
   const doc = document;
 
@@ -408,7 +439,7 @@ function htmlToPlainText(html) {
   text = text
     .replace(/\n\s*\n/g, '\n\n')
     .replace(/[ \t]+/g, ' ')
-    .replace(/^\s+|\s+$/gm, '') // Trim each line
+    .replace(/^\s+|\s+$/gm, '')
     .trim();
 
   return text;
@@ -444,13 +475,13 @@ function processNode(node) {
   return text;
 }
 
-function jsonResponse(data, status = 200) {
+// ========== HELPER FUNCTION ==========
+function jsonResponse(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Access-Control-Allow-Origin': '*',
-      'X-Content-Type-Options': 'nosniff',
+      ...headers
     },
   });
 }
