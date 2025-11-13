@@ -57,14 +57,17 @@ summary boolean true Include auto-generated summary
 Contoh Request Lengkap
 
 ```bash
+# Jina.ai compatible
+curl "https://your-worker.workers.dev/https://news.ycombinator.com"
+
 # Dengan semua fitur
-GET https://your-worker.workers.dev/?url=https://example.com/article&includeHtml=true&maxLength=5000&keywords=true&summary=true
+curl "https://your-worker.workers.dev/https://example.com?enhanced=true&keywords=true&summary=true"
 
-# Format plain text
-GET https://your-worker.workers.dev/?url=https://example.com/article&format=text
+# Output text
+curl "https://your-worker.workers.dev/https://example.com?format=text"
 
-# Batasi konten
-GET https://your-worker.workers.dev/?url=https://example.com/article&maxLength=1000
+# Dengan limitasi
+curl "https://your-worker.dev/https://example.com?maxLength=1000"
 ```
 
 📋 Response Format
