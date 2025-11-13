@@ -5,16 +5,27 @@ Cloudflare Worker untuk ekstraksi konten artikel dari berbagai website. API ini 
 ✨ Fitur
 
 · ✅ Content Extraction - Ekstrak konten utama dari artikel
+
 · ✅ Plain Text Conversion - Konversi HTML ke teks bersih
+
 · ✅ Metadata Extraction - Ambil metadata (Open Graph, Twitter Cards, dll)
+
 · ✅ Image Extraction - Ekstrak semua gambar dari artikel
+
 · ✅ Content Analysis - Analisis statistik konten (word count, reading time, dll)
+
 · ✅ Keyword Extraction - Otomatis ekstrak kata kunci penting
+
 · ✅ Summary Generation - Generate ringkasan otomatis
+
 · ✅ Caching System - Cache hasil untuk performa lebih baik
+
 · ✅ Rate Limiting - Proteksi terhadap abuse
+
 · ✅ CORS Support - Support untuk frontend applications
+
 · ✅ Multiple Formats - Response dalam JSON atau plain text
+
 
 🚀 Cara Menggunakan
 
