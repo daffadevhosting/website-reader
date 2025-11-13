@@ -1,0 +1,6 @@
+name = "readability"
+compatibility_date = "2025-11-01"
+
+[[kv_namespaces]]
+binding = "R_NAMESPACE"
+id = "your-kv-namespace-id"
