@@ -181,42 +181,50 @@ id = "your-kv-namespace-id"
 
 🛠️ API Endpoints
 
-GET /?url={url}
+`GET /?url={url}`
 
 Ekstrak konten dari URL yang diberikan
 
-POST /
+`POST /`
 
 Ekstrak konten dari URL dalam request body
 
-OPTIONS /
+`OPTIONS /`
 
 Handle CORS preflight requests
 
 ⚙️ Error Handling
 
 HTTP Status Error Type Description
-400 Invalid URL Format URL tidak valid
-400 URL parameter required Parameter URL tidak ditemukan
-400 Content is not HTML Response bukan HTML
-400 Could not extract content Gagal ekstrak konten
-408 Request timeout Website terlalu lama merespon
-429 Rate limit exceeded Melebihi batas request
-500 Server error Error internal server
+`400 Invalid URL Format URL tidak valid`
+`400 URL parameter required Parameter URL tidak ditemukan`
+`400 Content is not HTML Response bukan HTML`
+`400 Could not extract content Gagal ekstrak konten`
+`408 Request timeout Website terlalu lama merespon`
+`429 Rate limit exceeded Melebihi batas request`
+`500 Server error Error internal server`
 
 🔒 Rate Limiting
 
 · 100 requests per hour per IP address
+
 · Menggunakan Cloudflare KV untuk penyimpanan
+
 · Optional - bisa di-disable dengan menghapus KV binding
+
 
 🎯 Use Cases
 
 · Content Aggregation - Kumpulkan artikel dari berbagai sumber
+
 · Text Analysis - Analisis konten untuk NLP
+
 · News Monitoring - Monitor berita dari berbagai website
+
 · Research Tool - Ekstrak data untuk penelitian
+
 · Content Preview - Generate preview untuk link sharing
+
 
 🌐 CORS Support
 
