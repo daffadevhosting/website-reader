@@ -9,5 +9,5 @@ invocation_logs = true
 persist = true
 
 [[kv_namespaces]]
-binding = "YOUR_NAMESPACE"
+binding = "CACHE"
 id = "9eaf5a3f3187454896f976b96bd48e7a"
