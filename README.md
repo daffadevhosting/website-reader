@@ -106,8 +106,8 @@ Prerequisites
 1. Clone & Setup
 
 ```bash
-git clone <your-repo>
-cd rjina-worker
+git clone https://github.com/daffadevhosting/website-reader.git
+cd website-reader
 npm install
 ```
 
