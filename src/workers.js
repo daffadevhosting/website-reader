@@ -2,7 +2,7 @@ import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
 
 // Manual HTML to Markdown converter (no DOM dependency)
-function htmlToMarkdown(html) {
+function htmlToMarkdown(html, meta = {}) {
   if (!html) return '';
 
   const markdown = html
@@ -39,31 +39,37 @@ function htmlToMarkdown(html) {
     // Paragraphs
     .replace(/<p[^>]*>(.*?)<\/p>/gis, '\n$1\n\n')
 
-    // Block containers
+    // Containers
     .replace(/<div[^>]*>(.*?)<\/div>/gis, '\n$1\n')
     .replace(/<section[^>]*>(.*?)<\/section>/gis, '\n$1\n')
     .replace(/<article[^>]*>(.*?)<\/article>/gis, '\n$1\n')
     .replace(/<main[^>]*>(.*?)<\/main>/gis, '\n$1\n')
     .replace(/<footer[^>]*>(.*?)<\/footer>/gis, '\n$1\n')
 
-    // Line breaks
+    // br
     .replace(/<br[^>]*>/gi, '\n')
 
-    // Strip remaining tags
+    // strip remaining HTML
     .replace(/<[^>]+>/g, '')
 
-    // Normalize whitespace
+    // cleanup
     .replace(/\n{3,}/g, '\n\n')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n +/g, '\n')
     .trim();
 
-  // RETURN with DIVIDER
-  return `====
+  // FINAL OUTPUT = comply with your prompt style
+  return (
+`Title: ${meta.title || "Untitled"}
+Source: ${meta.url || "Unknown"}
 
+=======
+
+Markdown Content:
 ${markdown}
 
-====`;
+=======`
+  );
 }
 
 export default {
