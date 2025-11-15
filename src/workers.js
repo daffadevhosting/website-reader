@@ -4,51 +4,66 @@ import { parseHTML } from "linkedom";
 // Manual HTML to Markdown converter (no DOM dependency)
 function htmlToMarkdown(html) {
   if (!html) return '';
-  
-  // Simple conversion rules
-  return html
-    // Headers
-    .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n')
-    .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n')
-    .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n')
-    .replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n')
-    .replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n\n')
-    .replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n\n')
-    
-    // Bold and Italic
+
+  const markdown = html
+    // Headings
+    .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '\n# $1\n\n')
+    .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '\n## $1\n\n')
+    .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '\n### $1\n\n')
+    .replace(/<h4[^>]*>(.*?)<\/h4>/gi, '\n#### $1\n\n')
+    .replace(/<h5[^>]*>(.*?)<\/h5>/gi, '\n##### $1\n\n')
+    .replace(/<h6[^>]*>(.*?)<\/h6>/gi, '\n###### $1\n\n')
+
+    // Bold / Italic
     .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
     .replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**')
     .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
     .replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*')
-    
+
     // Links
     .replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)')
-    
+
     // Images
-    .replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi, '![$2]($1)')
-    .replace(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]*)"[^>]*>/gi, '![$1]($2)')
-    
-    // Code blocks
-    .replace(/<pre[^>]*>(.*?)<\/pre>/gis, '```\n$1\n```')
-    .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
-    
+    .replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi, '\n![$2]($1)\n')
+    .replace(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]*)"[^>]*>/gi, '\n![$1]($2)\n')
+
     // Lists
-    .replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n')
-    .replace(/<ul[^>]*>(.*?)<\/ul>/gis, '$1\n')
-    .replace(/<ol[^>]*>(.*?)<\/ol>/gis, '$1\n')
-    
-    // Paragraphs and line breaks
-    .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
+    .replace(/<li[^>]*>(.*?)<\/li>/gi, '\n- $1')
+    .replace(/<\/ul>/gi, '\n\n')
+    .replace(/<\/ol>/gi, '\n\n')
+
+    // Code blocks
+    .replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, '\n```\n$1\n```\n')
+    .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
+
+    // Paragraphs
+    .replace(/<p[^>]*>(.*?)<\/p>/gis, '\n$1\n\n')
+
+    // Block containers
+    .replace(/<div[^>]*>(.*?)<\/div>/gis, '\n$1\n')
+    .replace(/<section[^>]*>(.*?)<\/section>/gis, '\n$1\n')
+    .replace(/<article[^>]*>(.*?)<\/article>/gis, '\n$1\n')
+    .replace(/<main[^>]*>(.*?)<\/main>/gis, '\n$1\n')
+    .replace(/<footer[^>]*>(.*?)<\/footer>/gis, '\n$1\n')
+
+    // Line breaks
     .replace(/<br[^>]*>/gi, '\n')
-    .replace(/<div[^>]*>(.*?)<\/div>/gis, '$1\n')
-    
-    // Remove all other HTML tags
-    .replace(/<[^>]*>/g, '')
-    
-    // Clean up whitespace
-    .replace(/\n\s+\n/g, '\n\n')
-    .replace(/^\s+|\s+$/gm, '')
+
+    // Strip remaining tags
+    .replace(/<[^>]+>/g, '')
+
+    // Normalize whitespace
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n +/g, '\n')
     .trim();
+
+  // RETURN with DIVIDER
+  return `====
+
+${markdown}
+
+====`;
 }
 
 export default {
