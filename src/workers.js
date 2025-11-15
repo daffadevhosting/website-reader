@@ -1,10 +1,58 @@
 import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
-import TurndownService from "turndown";
+
+// Manual HTML to Markdown converter (no DOM dependency)
+function htmlToMarkdown(html) {
+  if (!html) return '';
+  
+  // Simple conversion rules
+  return html
+    // Headers
+    .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n')
+    .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n')
+    .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n')
+    .replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n')
+    .replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n\n')
+    .replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n\n')
+    
+    // Bold and Italic
+    .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
+    .replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**')
+    .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
+    .replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*')
+    
+    // Links
+    .replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)')
+    
+    // Images
+    .replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi, '![$2]($1)')
+    .replace(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]*)"[^>]*>/gi, '![$1]($2)')
+    
+    // Code blocks
+    .replace(/<pre[^>]*>(.*?)<\/pre>/gis, '```\n$1\n```')
+    .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
+    
+    // Lists
+    .replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n')
+    .replace(/<ul[^>]*>(.*?)<\/ul>/gis, '$1\n')
+    .replace(/<ol[^>]*>(.*?)<\/ol>/gis, '$1\n')
+    
+    // Paragraphs and line breaks
+    .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
+    .replace(/<br[^>]*>/gi, '\n')
+    .replace(/<div[^>]*>(.*?)<\/div>/gis, '$1\n')
+    
+    // Remove all other HTML tags
+    .replace(/<[^>]*>/g, '')
+    
+    // Clean up whitespace
+    .replace(/\n\s+\n/g, '\n\n')
+    .replace(/^\s+|\s+$/gm, '')
+    .trim();
+}
 
 export default {
   async fetch(request) {
-    // CORS headers
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -18,13 +66,11 @@ export default {
     try {
       const url = new URL(request.url);
       
-      // Multiple URL extraction methods
-      let target = url.pathname.slice(1); // Jina-style: /https://example.com
+      let target = url.pathname.slice(1);
       if (!target || target === '') {
-        target = url.searchParams.get("url"); // Query param: ?url=
+        target = url.searchParams.get("url");
       }
       
-      // POST body support
       if (!target && request.method === 'POST') {
         const contentType = request.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
@@ -40,7 +86,6 @@ export default {
             usage: {
               'jina_style': 'GET /https://example.com',
               'query_param': 'GET /?url=https://example.com', 
-              'post_json': 'POST / with {"url":"https://example.com"}'
             }
           }),
           { status: 400, headers: { ...corsHeaders, "content-type": "application/json" } }
@@ -52,7 +97,6 @@ export default {
         target = 'https://' + target;
       }
 
-      // Validate URL
       try {
         new URL(target);
       } catch {
@@ -62,21 +106,16 @@ export default {
         );
       }
 
-      // Fetch HTML dengan timeout
+      // Fetch HTML
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeout = setTimeout(() => controller.abort(), 10000);
 
       const res = await fetch(target, {
         headers: { 
-          "user-agent": "Mozilla/5.0 (compatible; rJina-Worker/1.0; +https://github.com/your-repo)",
+          "user-agent": "Mozilla/5.0 (compatible; rJina-Worker/1.0)",
           "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-          "accept-language": "en-US,en;q=0.5"
         },
         signal: controller.signal,
-        cf: {
-          cacheTtl: 3600, // Cache for 1 hour
-          cacheEverything: false,
-        }
       });
       clearTimeout(timeout);
 
@@ -88,41 +127,16 @@ export default {
       }
 
       const html = await res.text();
-      const contentType = res.headers.get('content-type') || '';
 
-      // Check if response is HTML
-      if (!contentType.includes('text/html')) {
-        return new Response(
-          JSON.stringify({ error: "Content is not HTML", contentType }),
-          { status: 400, headers: { ...corsHeaders, "content-type": "application/json" } }
-        );
-      }
-
-      // Parse HTML dengan base URL support
+      // Parse HTML dengan base URL
       const htmlWithBase = `<!DOCTYPE html><html><head><base href="${target}"></head><body>${html}</body></html>`;
       const { document } = parseHTML(htmlWithBase);
 
-      // Enhanced element removal
+      // Remove unwanted elements
       const removeSelectors = [
-        // Structural
-        "nav", "header", "footer", "aside", "menu", "dialog",
-        // Scripts & Styles
-        "script", "style", "noscript", "template",  
-        // Embeds
-        "iframe", "embed", "object", "canvas",
-        // Ads & Trackers
-        ".ad", ".ads", ".advertisement", ".ad-container", 
-        "[class*='ad-']", "[id*='ad-']", ".tracker", ".analytics",
-        // Social & Chat
-        ".chat-widget", ".ai-box", ".chatbot", ".social-widget",
-        ".share-buttons", ".comments-section",
-        // Navigation
-        ".sidebar", ".navbar", ".menu", ".navigation", ".breadcrumb",
-        // UI Elements
-        ".modal", ".popup", ".notification", ".banner", ".cookie-consent",
-        // Specific patterns
-        "[role='navigation']", "[role='banner']", "[role='complementary']",
-        ".hidden", "[aria-hidden='true']"
+        "nav", "header", "footer", "aside", "script", "style", "noscript",
+        "iframe", "embed", ".ad", ".ads", ".advertisement", ".chat-widget",
+        ".sidebar", ".navbar", ".menu", ".modal", ".popup"
       ];
 
       removeSelectors.forEach(sel => {
@@ -134,13 +148,7 @@ export default {
       });
 
       // Extract readable article
-      const reader = new Readability(document, {
-        debug: false,
-        maxElemsToParse: 100000,
-        nbTopCandidates: 5,
-        charThreshold: 500
-      });
-      
+      const reader = new Readability(document);
       const article = reader.parse();
 
       if (!article) {
@@ -150,43 +158,13 @@ export default {
         );
       }
 
-      // Enhanced Turndown configuration
-      const td = new TurndownService({
-        headingStyle: "atx",
-        codeBlockStyle: "fenced",
-        emDelimiter: "*",
-        strongDelimiter: "**",
-        bulletListMarker: "-",
-        linkStyle: "inlined",
-        linkReferenceStyle: "full"
-      });
+      // Convert to Markdown
+      const markdown = htmlToMarkdown(article.content);
 
-      // Custom rules for better markdown conversion
-      td.addRule('images', {
-        filter: 'img',
-        replacement: function (content, node) {
-          const alt = node.alt || '';
-          const src = node.src || '';
-          const title = node.title || '';
-          const titlePart = title ? ` "${title}"` : '';
-          return src ? `![${alt}](${src}${titlePart})` : '';
-        }
-      });
-
-      td.addRule('lineBreaks', {
-        filter: ['br', 'hr'],
-        replacement: function () {
-          return '\n\n';
-        }
-      });
-
-      const markdown = td.turndown(article.content);
-
-      // Format output based on request type
-      const acceptHeader = request.headers.get('accept') || '';
+      // Format output
       const format = url.searchParams.get('format') || 'text';
 
-      if (format === 'json' || acceptHeader.includes('application/json')) {
+      if (format === 'json') {
         return new Response(
           JSON.stringify({
             success: true,
@@ -196,7 +174,6 @@ export default {
               byline: article.byline,
               excerpt: article.excerpt,
               content: markdown,
-              textContent: article.textContent,
               length: article.length,
               siteName: article.siteName
             }
@@ -205,11 +182,12 @@ export default {
         );
       }
 
-      // Plain text/markdown output (default)
+      // Plain text/markdown output
       const output = `
 Title: ${article.title || 'No title'}
 Source: ${target}
 ${article.byline ? `Author: ${article.byline}\n` : ''}
+
 ${markdown}
       `.trim();
 
@@ -220,23 +198,16 @@ ${markdown}
     } catch (err) {
       console.error('Error:', err);
       
-      // Handle specific errors
       let status = 500;
       let errorMessage = err.toString();
       
       if (err.name === 'AbortError') {
         status = 408;
         errorMessage = 'Request timeout';
-      } else if (err.message?.includes('Failed to fetch')) {
-        status = 502;
-        errorMessage = 'Failed to fetch target URL';
       }
 
       return new Response(
-        JSON.stringify({ 
-          error: errorMessage,
-          ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-        }),
+        JSON.stringify({ error: errorMessage }),
         { status, headers: { ...corsHeaders, "content-type": "application/json" } }
       );
     }
