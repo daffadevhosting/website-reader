@@ -129,7 +129,7 @@ export default {
 
       // Fetch HTML
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
+      const timeout = setTimeout(() => controller.abort(), 30000);
 
       const res = await fetch(target, {
         headers: { 

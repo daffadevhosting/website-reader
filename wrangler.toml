@@ -8,6 +8,4 @@ head_sampling_rate = 1
 invocation_logs = true
 persist = true
 
-[[kv_namespaces]]
-binding = "CACHE"
-id = "9eaf5a3f3187454896f976b96bd48e7a"
+
