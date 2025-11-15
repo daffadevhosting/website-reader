@@ -5,12 +5,19 @@ Cloudflare Worker untuk ekstraksi konten web yang compatible dengan R.jina.ai, m
 ✨ Features
 
 · ✅ Jina.ai Compatible - Drop-in replacement untuk R.jina.ai
+
 · ✅ SPA Support - Ekstrak konten dari JavaScript-heavy websites
+
 · ✅ Markdown Output - Konten dalam format terstruktur
+
 · ✅ Lightning Fast - Cloudflare edge network
+
 · ✅ Free & Open Source - Tidak ada biaya API
+
 · ✅ CORS Enabled - Ready untuk frontend applications
+
 · ✅ Multiple URL Formats - Support berbagai cara request
+
 
 🚀 Quick Start
 
@@ -31,11 +38,13 @@ curl -X POST https://readability.mvstream.workers.dev/ \
 
 📋 API Reference
 
-GET /https://example.com
+`GET /https://example.com`
+
 
 Ekstrak konten dari URL langsung (Jina-style)
 
-GET /?url=https://example.com
+`GET /?url=https://example.com`
+
 
 Ekstrak konten via query parameter
 
@@ -123,9 +132,13 @@ npm run deploy
 Built With
 
 · Cloudflare Workers - Edge runtime
+
 · Mozilla Readability - Content extraction
+
 · LinkedOM - DOM parsing
+
 · HTML-to-Text - Clean text conversion
+
 
 Architecture
 
@@ -211,10 +224,11 @@ print(content)
 
 ⚡ Performance
 
-· Response Time: < 2 seconds (rata-rata)
-· Uptime: 99.9% (Cloudflare guarantee)
-· Cache: Built-in Cloudflare caching
-· Scale: Unlimited dengan Workers plan
+- Response Time: < 2 seconds (rata-rata)
+- Uptime: 99.9% (Cloudflare guarantee)
+- Cache: Built-in Cloudflare caching
+- Scale: Unlimited dengan Workers plan
+
 
 🔒 Error Handling
 
@@ -240,10 +254,11 @@ Common Errors
 
 HTTP Status Codes
 
-· 200 - Success
-· 400 - Bad Request (invalid URL, missing parameter)
-· 408 - Request Timeout
-· 500 - Internal Server Error
+- 200 - Success
+- 400 - Bad Request (invalid URL, missing parameter)
+- 408 - Request Timeout
+- 500 - Internal Server Error
+
 
 🌐 CORS Support
 
@@ -301,19 +316,13 @@ $6/10,000
 🚨 Limitations
 
 · JavaScript Execution: Tidak execute JavaScript client-side
+
 · Dynamic Content: Konten yang di-load via AJAX mungkin tidak terambil
+
 · Authentication: Tidak support websites yang butuh login
+
 · Rate Limiting: Basic rate limiting (consider upgrade untuk heavy use)
 
-🔄 Comparison dengan R.jina.ai
-
-Feature R.jina.ai rJina Worker
-Cost $10-$500/month FREE
-JavaScript Rendering ✅ ⚠️ Limited
-SPA Support ✅ ✅
-Self-hosted ❌ ✅
-Customizable ❌ ✅
-Rate Limits Tier-based Generous
 
 📈 Monitoring
 
