@@ -148,48 +148,43 @@ export default {
       });
 
       // Extract readable article
-      const reader = new Readability(document);
-      const article = reader.parse();
+const mode = url.searchParams.get("mode") || "readability";
 
-      if (!article) {
-        return new Response(
-          JSON.stringify({ error: "Could not extract content from page" }),
-          { status: 500, headers: { ...corsHeaders, "content-type": "application/json" } }
-        );
-      }
+let title = "";
+let htmlContent = "";
 
-      // Convert to Markdown
-      const markdown = htmlToMarkdown(article.content);
+// MODE 1: readability (default)
+if (mode === "readability") {
+  const reader = new Readability(document);
+  const article = reader.parse();
 
-      // Format output
-      const format = url.searchParams.get('format') || 'text';
+  if (!article) {
+    return new Response(
+      JSON.stringify({ error: "Could not extract content" }),
+      { status: 500, headers: { ...corsHeaders, "content-type": "application/json" } }
+    );
+  }
 
-      if (format === 'json') {
-        return new Response(
-          JSON.stringify({
-            success: true,
-            data: {
-              url: target,
-              title: article.title,
-              byline: article.byline,
-              excerpt: article.excerpt,
-              content: markdown,
-              length: article.length,
-              siteName: article.siteName
-            }
-          }, null, 2),
-          { headers: { ...corsHeaders, "content-type": "application/json" } }
-        );
-      }
+  title = article.title || "Untitled";
+  htmlContent = article.content;
 
-      // Plain text/markdown output
-      const output = `
-Title: ${article.title || 'No title'}
+// MODE 2: full-page like r.jina
+} else if (mode === "full") {
+  // use cleaned body directly
+  title = document.title || "Untitled";
+  htmlContent = document.body.innerHTML;
+}
+
+const markdown = htmlToMarkdown(htmlContent);
+
+// final output
+const output = `
+Title: ${title}
 Source: ${target}
-${article.byline ? `Author: ${article.byline}\n` : ''}
 
+Markdown Content:
 ${markdown}
-      `.trim();
+`.trim();
 
       return new Response(output, {
         headers: { ...corsHeaders, "content-type": "text/plain; charset=utf-8" }
