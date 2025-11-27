@@ -2,23 +2,17 @@
 
 Cloudflare Worker untuk ekstraksi konten web yang compatible dengan R.jina.ai, mendukung SPA (Single Page Applications) dan website tradisional.
 
-✨ Features
+### ✨ Features
 
-· ✅ Jina.ai Compatible - Drop-in replacement untuk R.jina.ai
+- ✅ Jina.ai Compatible - Drop-in replacement untuk R.jina.ai
+- ✅ SPA Support - Ekstrak konten dari JavaScript-heavy websites
+- ✅ Markdown Output - Konten dalam format terstruktur
+- ✅ Lightning Fast - Cloudflare edge network
+- ✅ Free & Open Source - Tidak ada biaya API
+- ✅ CORS Enabled - Ready untuk frontend applications
+- ✅ Multiple URL Formats - Support berbagai cara request
 
-· ✅ SPA Support - Ekstrak konten dari JavaScript-heavy websites
-
-· ✅ Markdown Output - Konten dalam format terstruktur
-
-· ✅ Lightning Fast - Cloudflare edge network
-
-· ✅ Free & Open Source - Tidak ada biaya API
-
-· ✅ CORS Enabled - Ready untuk frontend applications
-
-· ✅ Multiple URL Formats - Support berbagai cara request
-
-* Peningkatan Keamanan
+### Peningkatan Keamanan
 
 - Validasi URL: Memastikan URL valid dan aman
 - SSRF Protection: Memblokir akses ke internal/private IP
@@ -26,13 +20,13 @@ Cloudflare Worker untuk ekstraksi konten web yang compatible dengan R.jina.ai, m
 - Domain Whitelist: Opsional whitelist domain yang diizinkan
 - Block Credentials: Mencegah URL dengan username/password
 
-* Format Output Baru
+### Format Output Baru
 
 - Markdown (default): Format asli
 - JSON: Structured data dengan metadata lengkap
 - HTML: HTML content yang sudah dibersihkan
 
-* Ekstraksi Konten Spesifik
+### Ekstraksi Konten Spesifik
 
 - Parameter selector untuk CSS selector
 - Contoh: ?url=...&selector=.article-content
@@ -43,7 +37,7 @@ Cloudflare Worker untuk ekstraksi konten web yang compatible dengan R.jina.ai, m
 
 Basic Usage
 
-* Parameter Tambahan
+### Parameter Tambahan
 
 - format: markdown/json/html
 - mode: readability/full
