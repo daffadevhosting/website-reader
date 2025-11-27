@@ -1,4 +1,4 @@
-🚀 Workers Content Extractor API
+### 🚀 Workers Content Extractor API
 
 Cloudflare Worker untuk ekstraksi konten web yang compatible dengan R.jina.ai, mendukung SPA (Single Page Applications) dan website tradisional.
 
@@ -33,7 +33,7 @@ Cloudflare Worker untuk ekstraksi konten web yang compatible dengan R.jina.ai, m
 - Mendukung multiple elements
 
 
-🚀 Quick Start
+### 🚀 Quick Start
 
 Basic Usage
 
@@ -71,7 +71,7 @@ curl -X POST https://readability.mvstream.workers.dev/ \
   -d '{"url":"https://example.com"}'
 ```
 
-📋 API Reference
+### 📋 API Reference
 
 `GET /https://example.com`
 
@@ -97,7 +97,7 @@ Parameter Type Default Description
 url string required Target URL untuk diekstrak
 format string text Output format: text atau json
 
-📦 Response Formats
+### 📦 Response Formats
 
 Text Format (Default)
 
@@ -130,7 +130,7 @@ curl "https://readability.mvstream.workers.dev/https://example.com?format=json"
 }
 ```
 
-🔧 Installation & Deployment
+### 🔧 Installation & Deployment
 
 Prerequisites
 
@@ -162,7 +162,7 @@ npm run dev
 npm run deploy
 ```
 
-🛠️ Technical Details
+### 🛠️ Technical Details
 
 Built With
 
@@ -182,7 +182,7 @@ Request → Cloudflare Worker → Fetch Target URL →
 Readability Extraction → Text Cleaning → Response
 ```
 
-🎯 Use Cases
+### 🎯 Use Cases
 
 1. AI Content Processing
 
@@ -211,7 +211,7 @@ const oldContent = await extractContent('https://old-blog.com/post');
 // Convert ke format baru dan simpan
 ```
 
-🔄 Integration Examples
+### 🔄 Integration Examples
 
 Frontend JavaScript
 
@@ -257,7 +257,7 @@ content = extract_content("https://example.com")
 print(content)
 ```
 
-⚡ Performance
+### ⚡ Performance
 
 - Response Time: < 2 seconds (rata-rata)
 - Uptime: 99.9% (Cloudflare guarantee)
@@ -265,7 +265,7 @@ print(content)
 - Scale: Unlimited dengan Workers plan
 
 
-🔒 Error Handling
+### 🔒 Error Handling
 
 Common Errors
 
@@ -295,7 +295,7 @@ HTTP Status Codes
 - 500 - Internal Server Error
 
 
-🌐 CORS Support
+### 🌐 CORS Support
 
 API fully support CORS untuk frontend applications:
 
@@ -308,7 +308,7 @@ fetch('https://readability.mvstream.workers.dev/https://example.com')
   });
 ```
 
-📊 Examples
+### 📊 Examples
 
 Input URL
 
@@ -348,7 +348,7 @@ $6/10,000
 ...
 ```
 
-🚨 Limitations
+### 🚨 Limitations
 
 · JavaScript Execution: Tidak execute JavaScript client-side
 
@@ -359,7 +359,7 @@ $6/10,000
 · Rate Limiting: Basic rate limiting (consider upgrade untuk heavy use)
 
 
-📈 Monitoring
+### 📈 Monitoring
 
 Check usage di Cloudflare Dashboard:
 
