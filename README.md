@@ -18,10 +18,51 @@ Cloudflare Worker untuk ekstraksi konten web yang compatible dengan R.jina.ai, m
 
 · ✅ Multiple URL Formats - Support berbagai cara request
 
+* Peningkatan Keamanan
+
+- Validasi URL: Memastikan URL valid dan aman
+- SSRF Protection: Memblokir akses ke internal/private IP
+- Force HTTPS: Selalu menggunakan HTTPS
+- Domain Whitelist: Opsional whitelist domain yang diizinkan
+- Block Credentials: Mencegah URL dengan username/password
+
+* Format Output Baru
+
+- Markdown (default): Format asli
+- JSON: Structured data dengan metadata lengkap
+- HTML: HTML content yang sudah dibersihkan
+
+* Ekstraksi Konten Spesifik
+
+- Parameter selector untuk CSS selector
+- Contoh: ?url=...&selector=.article-content
+- Mendukung multiple elements
+
 
 🚀 Quick Start
 
 Basic Usage
+
+* Parameter Tambahan
+
+- format: markdown/json/html
+- mode: readability/full
+- selector: CSS selector
+- nocache: skip cache
+
+```bash
+# Markdown dengan selector spesifik
+GET /https://example.com?selector=.main-content
+
+# Output JSON
+GET /https://example.com?format=json
+
+# HTML content saja
+GET /https://example.com?format=html&mode=full
+
+# Tanpa cache
+GET /https://example.com?nocache=true
+```
 
 ```bash
 # Jina.ai style (recommended)
